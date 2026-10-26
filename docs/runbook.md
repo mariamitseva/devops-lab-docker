@@ -167,3 +167,96 @@ docker start notes-api-container
 ## Заключение
 
 С помощта на тези команди можем да стартираме приложението локално или чрез Docker, да проверим дали работи, да изпълним тестовете и да открием основни проблеми при неговото стартиране.
+## Стартиране с Compose
+
+Compose стартира Notes API и PostgreSQL от файла compose.yaml.
+
+### Подготовка
+
+При първоначална настройка копираме примерния файл:
+
+```bash
+cp -n .env.example .env
+```
+
+В .env задаваме POSTGRES_USER, POSTGRES_PASSWORD и POSTGRES_DB.
+Заменяме примерната парола със собствена. Ако .env вече е настроен,
+използваме съществуващия файл. Той не се комитва в Git.
+
+### Стартиране и проверка
+
+```bash
+docker compose up -d --build
+docker compose ps
+curl http://localhost:8000/ready
+curl http://localhost:8000/version
+```
+
+Очакваме db да е healthy, /ready да върне {"status":"ready"},
+а /version да показва версия 0.4.0.
+
+Приложението намира базата чрез името db на порт 5432.
+depends_on с condition: service_healthy изчаква базата да е готова.
+
+В Codespaces отваряме порт 8000 от Ports и добавяме /ready или /version
+към адреса. Основният адрес / няма начална страница.
+
+### Логове
+
+```bash
+docker compose logs app
+docker compose logs db
+docker compose logs -f app
+```
+
+Ctrl+C прекратява следенето на логовете, без да спира услугата.
+
+### Спиране и запазване на данните
+
+```bash
+docker compose down
+```
+
+Премахва контейнерите и мрежата, но запазва именувания volume
+postgres_data. При следващо docker compose up -d бележките остават.
+
+```bash
+docker compose down -v
+```
+
+Премахва и volume-а. Данните в базата се изтриват.
+Използваме тази команда само когато искаме да изчистим тестовата база.
+
+### Adminer при нужда
+
+```bash
+docker compose --profile tools up -d
+```
+
+Отваряме порт 8081 в отделен таб на браузъра.
+Избираме PostgreSQL, сървър db:5432 и данните за вход от .env.
+След входа разглеждаме таблицата notes.
+
+Профилът tools позволява Adminer да се стартира по избор.
+За спиране и премахване на всички услуги, включително Adminer:
+
+```bash
+docker compose --profile tools down
+```
+
+### Откриване на проблеми
+
+```bash
+docker compose ps -a
+docker compose logs --tail=30 app db
+docker compose config -q
+curl -i http://localhost:8000/ready
+```
+
+docker compose config показва конфигурацията след заместване на
+променливите, включително паролата. За проверка без показване на
+стойностите използваме docker compose config -q.
+
+При проблем с връзката проверяваме дали DATABASE_URL използва db,
+дали паролите съвпадат и дали базата работи.
+Промяната на POSTGRES_PASSWORD не сменя паролата във вече създадена база.
