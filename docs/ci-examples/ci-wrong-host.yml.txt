@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: notes
+          POSTGRES_PASSWORD: ci-only
+          POSTGRES_DB: notes
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U notes"
+          --health-interval 5s
+          --health-retries 10
+
+    env:
+      TEST_DATABASE_URL: postgresql://notes:ci-only@postgres:5432/notes
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Run tests
+        run: pytest -v
+
+  build:
+    needs: test
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Build Docker image
+        run: docker build -t notes-api:${{ github.sha }} .
+
+      - name: Smoke test
+        run: |
+          docker run -d --name ci-notes-app -p 8000:8000 notes-api:${{ github.sha }}
+          for _ in $(seq 1 20); do
+            curl -fsS http://localhost:8000/health && exit 0
+            sleep 1
+          done
+          docker logs ci-notes-app
+          exit 1
+
+      - name: Clean up
+        if: always()
+        run: docker rm -f ci-notes-app || true
