@@ -44,3 +44,27 @@ jobs:
 
       - name: Run tests
         run: pytest -v
+
+  build:
+    needs: test
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Build Docker image
+        run: docker build -t notes-api:${{ github.sha }} .
+
+      - name: Smoke test
+        run: |
+          docker run -d --name ci-notes-app -p 8000:8000 notes-api:${{ github.sha }}
+          for _ in $(seq 1 20); do
+            curl -fsS http://localhost:8000/health && exit 0
+            sleep 1
+          done
+          docker logs ci-notes-app
+          exit 1
+
+      - name: Clean up
+        if: always()
+        run: docker rm -f ci-notes-app || true
