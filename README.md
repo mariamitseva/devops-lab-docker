@@ -1,3 +1,5 @@
+[![CI](https://github.com/mariamitseva/devops-lab-docker/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mariamitseva/devops-lab-docker/actions/workflows/ci.yml)
+
 # Notes API: учебно приложение за курса по DevOps
 
 **Български** · [English](#notes-api--devops-course-starter-app)
