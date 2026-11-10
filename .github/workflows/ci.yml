@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, test/lab06-no-packages-write]
     tags: ["v*"]
   pull_request:
 
@@ -52,7 +52,6 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-      packages: write
 
     steps:
       - name: Check out code
