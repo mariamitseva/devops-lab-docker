@@ -122,3 +122,33 @@
         name: notes
         state: restarted
         daemon_reload: true
+
+- name: Configure the nginx load balancer
+  hosts: lb
+  become: true
+  tasks:
+    - name: Install nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+
+    - name: Configure nginx to proxy to the web servers
+      ansible.builtin.template:
+        src: nginx-default.j2
+        dest: /etc/nginx/sites-available/default
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Reload nginx
+
+    - name: Start and enable nginx
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
+
+  handlers:
+    - name: Reload nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded
